@@ -44,9 +44,7 @@ app.get("/products", async (req, res) => {
 app.get("/products/:productsId", async (req, res) => {
   try {
     const productId = req.params.productsId;
-    console.log("productId", productId, typeof productId);
-    if (!productId || mongoose.isValidObjectId(productId))
-      // I used to check whether the product Id is valid object Id from mongodb
+    if (!productId)
       return res.status(404).json({ message: "Product not found :(" });
     const product = await Product.findById(productId);
     res.status(200).json(product);
