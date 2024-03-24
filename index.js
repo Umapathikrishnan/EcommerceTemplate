@@ -2,10 +2,12 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 const Product = require("./models/products");
 const User = require("./models/users");
 const { mongodb_connection_url } = require("./config/database.config");
+const verifyToken = require("./middleware/auth");
 
 const app = express();
 
@@ -24,12 +26,12 @@ mongoose
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-app.get("/", (req, res) => {
+app.get("/", verifyToken, (req, res) => {
   res.json({ message: "Hello Crud Node Express" });
 });
 
 // get all products
-app.get("/products", async (req, res) => {
+app.get("/products", verifyToken, async (req, res) => {
   try {
     const products = await Product.find();
     console.log("p", products);
@@ -41,7 +43,7 @@ app.get("/products", async (req, res) => {
 });
 
 //get user by id
-app.get("/products/:productsId", async (req, res) => {
+app.get("/products/:productsId", verifyToken, async (req, res) => {
   try {
     const productId = req.params.productsId;
     if (!productId)
@@ -86,11 +88,15 @@ app.post("/login", async (req, res) => {
     console.log("pwd", user, user.password);
     const isPasswordMatched = await bcrypt.compare(password, user.password);
 
-    if (isPasswordMatched) {
-      res.status(200).json({ message: "Logged In successfully" });
-    } else {
+    if (!isPasswordMatched) {
       res.status(401).json({ message: "Invalid Credentials" });
     }
+
+    const token = jwt.sign({ userId: user._id }, "your-secret-key", {
+      expiresIn: "1h",
+    });
+
+    res.status(200).json({ token });
   } catch (error) {
     console.error("Error in login", error);
     res.status(500).json({ message: "Internal Server Error" });
