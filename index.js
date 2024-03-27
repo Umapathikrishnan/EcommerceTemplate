@@ -1,11 +1,9 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
 
-const Product = require("./models/products");
-const User = require("./models/users");
+const userRoutes = require("./routes/userRoutes");
+const productRoutes = require("./routes/productRoutes");
 const { mongodb_connection_url } = require("./config/database.config");
 const verifyToken = require("./middleware/auth");
 
@@ -30,104 +28,8 @@ app.get("/", verifyToken, (req, res) => {
   res.json({ message: "Hello Crud Node Express" });
 });
 
-// get all products
-app.get("/products", verifyToken, async (req, res) => {
-  try {
-    const products = await Product.find();
-    console.log("p", products);
-    res.status(200).json(products);
-  } catch (error) {
-    console.log("e", error);
-    res.status(404).json({ message: error.message });
-  }
-});
-
-//get user by id
-app.get("/product/:productsId", verifyToken, async (req, res) => {
-  try {
-    const productId = req.params.productsId;
-    if (!productId)
-      return res.status(404).json({ message: "Product not found :(" });
-    const product = await Product.findById(productId);
-    res.status(200).json(product);
-    console.log("Done: p", product);
-  } catch (error) {
-    console.error("Error in finding getProductById", error);
-    res.status(500).json("Internal Server Error :(");
-  }
-});
-
-app.post("/product", verifyToken, async (req, res) => {
-  try {
-    const { name, description, price, imageUrl, category } = req.body;
-    const newProduct = new Product({
-      name,
-      description,
-      price,
-      imageUrl,
-      category,
-    });
-    await newProduct.save();
-    res.status(201).json({ message: "Product created successfully" });
-  } catch (error) {
-    console.error("Error in product creation", error);
-    res.status(500).json({ message: "Error in product creation" });
-  }
-});
-
-app.delete("/product/:productId", verifyToken, async (req, res) => {
-  const productId = req.params.productId;
-  const deletedProduct = await Product.findByIdAndDelete(productId);
-  if (!deletedProduct) {
-    return res.status(404).json({ message: "Product not found :)" });
-  }
-  res.status(200).json({ message: "Product deleted successfully." });
-});
-// user - signup
-app.post("/register", async (req, res) => {
-  try {
-    const { userName, email, password } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const newUser = new User({
-      userName,
-      email,
-      password: hashedPassword,
-    });
-
-    await newUser.save();
-
-    res.status(201).json({ message: "User created successfully" });
-  } catch (error) {
-    console.error("Error in User signup", error);
-    res.status(500).json({ message: "Error in user signup" });
-  }
-});
-
-//user login
-app.post("/login", async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email });
-
-    if (!user) return res.status(404).json({ message: "User not found" });
-    console.log("pwd", user, user.password);
-    const isPasswordMatched = await bcrypt.compare(password, user.password);
-
-    if (!isPasswordMatched) {
-      res.status(401).json({ message: "Invalid Credentials" });
-    }
-
-    const token = jwt.sign({ userId: user._id }, "your-secret-key", {
-      expiresIn: "1h",
-    });
-
-    res.status(200).json({ token });
-  } catch (error) {
-    console.error("Error in login", error);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
-});
+app.use("/products", productRoutes);
+app.use("/user", userRoutes);
 
 app.listen(3000, () => {
   console.log(
