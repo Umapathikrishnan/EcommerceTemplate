@@ -43,7 +43,7 @@ app.get("/products", verifyToken, async (req, res) => {
 });
 
 //get user by id
-app.get("/products/:productsId", verifyToken, async (req, res) => {
+app.get("/product/:productsId", verifyToken, async (req, res) => {
   try {
     const productId = req.params.productsId;
     if (!productId)
@@ -57,8 +57,34 @@ app.get("/products/:productsId", verifyToken, async (req, res) => {
   }
 });
 
+app.post("/product", verifyToken, async (req, res) => {
+  try {
+    const { name, description, price, imageUrl, category } = req.body;
+    const newProduct = new Product({
+      name,
+      description,
+      price,
+      imageUrl,
+      category,
+    });
+    await newProduct.save();
+    res.status(201).json({ message: "Product created successfully" });
+  } catch (error) {
+    console.error("Error in product creation", error);
+    res.status(500).json({ message: "Error in product creation" });
+  }
+});
+
+app.delete("/product/:productId", verifyToken, async (req, res) => {
+  const productId = req.params.productId;
+  const deletedProduct = await Product.findByIdAndDelete(productId);
+  if (!deletedProduct) {
+    return res.status(404).json({ message: "Product not found :)" });
+  }
+  res.status(200).json({ message: "Product deleted successfully." });
+});
 // user - signup
-app.post("/signup", async (req, res) => {
+app.post("/register", async (req, res) => {
   try {
     const { userName, email, password } = req.body;
     const hashedPassword = await bcrypt.hash(password, 10);
